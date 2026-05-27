@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RBTV Home — Figma 1:1 React Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+/* ============================================================
+   FIX vs the previous version:
+   Every scaled value is now `calc(var(--rail-width) * N / 1440)`
+   — length × number / number = a valid length.
+   No more `--scale` intermediate (that was length-typed and broke
+   everything when multiplied by 1px again).
+   ============================================================ */
+
+*,*::before,*::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: #0B0C0E;
+  color: #fff;
+  font-family: 'Noto Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; border: none; background: none; cursor: pointer; padding: 0; }
+a { color: inherit; text-decoration: none; }
+
+:root {
+  /* The whole layout hangs off this. Hero is 16:9 AND ≤90vh AND ≤100vw. */
+  --hero-width: min(100vw, calc(85vh * 16 / 9));
+  --rail-width: var(--hero-width);
+  --rail-pad:   calc(var(--rail-width) * 56 / 1440);  /* shared by rail title + card scroller */
+
+  /* Figma colors — verbatim. */
+  --c-bg:               #0B0C0E;
+  --c-text-primary:     #fff;
+  --c-text-secondary:   #aaa;
+  --c-text-tertiary:    #000f1e;
+  --c-accent:           #bd1212;     /* color/accent/focus/100% */
+  --c-dark-1-new:       #404852;     /* color/solid/dark/1-(new*) */
+  --c-button-bg:        #f8f8f8;     /* color/solid/light/2 */
+  --c-glass-10:         rgba(255,255,255,0.10);
+  --c-glass-20:         rgba(255,255,255,0.20);
+  --c-image-placeholder:#2e3640;     /* the rectangle fill */
+
+  /* Fixed radii (don't scale) */
+  --r-sm:   6px;     /* corner-radius/sm */
+  --r-full: 999px;   /* corner-radius/full */
+}
+
+/* ============================================================
+   APP
+   ============================================================ */
+.app { width: 100%; min-height: 100vh; background: var(--c-bg); }
+
+/* ============================================================
+   NAV — absolute, floats over hero
+   ============================================================ */
+/* Figma 14:3700  web nav  (1440 × 78 content row, 12px py, 64px px) */
+.nav {
+  position: absolute; top: 0;
+  left: 50%; transform: translateX(-50%);
+  width: var(--rail-width);
+  z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px calc(var(--rail-width) * 64 / 1440);
+  /* Neutral dark fade — no blue tint */
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.70) 0%,
+    rgba(0,0,0,0.40) 50%,
+    rgba(0,0,0,0.00) 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Noto Sans', sans-serif;
+}
+
+/* LEFT: logo + tabs pill */
+.nav__left {
+  display: flex; align-items: center;
+  gap: calc(var(--rail-width) * 8 / 1440);
+}
+.nav__logo {
+  font-style: italic;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--c-text-primary);
+  padding: 0 calc(var(--rail-width) * 8 / 1440);
+}
+
+/* Glass pill capsule containing tabs */
+.nav__tabs {
+  display: inline-flex; align-items: center;
+  height: 40px;
+  padding: 2px;
+  background: rgba(26, 26, 26, 0.40);
+  border: 1px solid rgba(255, 255, 255, 0.40);
+  border-radius: 30px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.nav__tab {
+  height: 100%;
+  padding: 0 calc(var(--rail-width) * 16 / 1440);
+  display: inline-flex; align-items: center;
+  border-radius: var(--r-full);
+  color: var(--c-text-primary);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+  cursor: pointer;
+}
+.nav__tab:hover { background: rgba(255,255,255,0.08); }
+.nav__tab--active,
+.nav__tab--active:hover {
+  background: rgba(255, 255, 255, 0.90);
+  color: var(--c-text-tertiary);
+  -webkit-backdrop-filter: blur(50px);
+  backdrop-filter: blur(50px);
+}
+
+/* RIGHT: CTA + icon circles */
+.nav__right {
+  display: flex; align-items: center;
+  gap: calc(var(--rail-width) * 11 / 1440);
+}
+.nav__cta {
+  background: #8133ce;        /* color/brand/2-(primary) */
+  color: var(--c-text-primary);
+  height: 36px;
+  padding: 0 calc(var(--rail-width) * 16 / 1440);
+  border-radius: var(--r-full);
+  font-weight: 500;
+  font-size: 14px;
+  display: inline-flex; align-items: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nav__cta:hover { filter: brightness(1.08); }
+.nav__icon-btn {
+  width:  36px;
+  height: 36px;
+  border-radius: var(--r-full);
+  background: rgba(26, 26, 26, 0.20);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  display: grid; place-items: center;
+  color: var(--c-text-primary);
+  cursor: pointer;
+}
+.nav__icon-btn:hover { background: rgba(26, 26, 26, 0.35); }
+.nav__icon-btn svg {
+  width: 55%; height: 55%;
+  display: block;
+}
+
+/* ============================================================
+   HERO  (Figma 14:3661) — 16:9, ≤90vh
+   ============================================================ */
+.hero-wrap {
+  position: relative;
+  width: var(--hero-width);
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+.hero__bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 55% 45% at 70% 70%, rgba(120,128,140,0.30), transparent 70%),
+    radial-gradient(ellipse 45% 45% at 25% 35%, rgba(90,98,110,0.20), transparent 70%),
+    #2a3038;
+}
+.hero__scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 45%, transparent 70%);
+}
+/* Content is BOTTOM-anchored inside the 16:9 hero. */
+.hero__content {
+  position: absolute;
+  left:   calc(var(--rail-width) * 80 / 1440);
+  right:  calc(var(--rail-width) * 80 / 1440);
+  bottom: calc(var(--rail-width) * 80 / 1440);
+}
+.hero__info {
+  width: calc(var(--rail-width) * 820 / 1440);
+  max-width: 100%;
+  display: flex; flex-direction: column;
+  gap: calc(var(--rail-width) * 24 / 1440);
+}
+.hero__title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 48px;
+  line-height: calc(62 / 48);
+  color: var(--c-text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hero__meta-row {
+  display: flex; flex-wrap: wrap; align-items: center;
+  row-gap: calc(var(--rail-width) * 12 / 1440);
+  column-gap: calc(var(--rail-width) * 20 / 1440);
+}
+.pill {
+  display: inline-flex; align-items: center;
+  padding: 0 calc(var(--rail-width) * 8 / 1440);
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+}
+.pill--rating {
+  background: var(--c-dark-1-new);
+  color: var(--c-text-primary);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: calc(30 / 22);
+  min-width: 34px;
+  justify-content: center;
+}
+.pill--new {
+  background: var(--c-accent);
+  color: var(--c-text-primary);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: calc(30 / 22);
+}
+.hero__metadata {
+  display: inline-flex; align-items: center;
+  gap: calc(var(--rail-width) * 12 / 1440);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: calc(30 / 22);
+  color: var(--c-text-secondary);
+}
+.hero__desc {
+  margin: 0;
+  font-weight: 400;
+  font-size: 27px;
+  line-height: calc(38 / 27);
+  color: var(--c-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hero__buttons {
+  display: flex;
+  gap: calc(var(--rail-width) * 24 / 1440);
+  margin-top: calc(var(--rail-width) * 8 / 1440);
+}
+.btn-play {
+  background: var(--c-button-bg);
+  color: var(--c-text-tertiary);
+  height: 60px;
+  padding: 0 40px 0 32px;       /* Figma: pl-32, pr-40 */
+  display: inline-flex; align-items: center;
+  gap: 12px;
+  border-radius: 200px;
+  font-weight: 500;
+  font-size: 27px;
+  line-height: 1;
+}
+.btn-icon-circle {
+  width:  60px;
+  height: 60px;
+  border-radius: var(--r-full);
+  background: var(--c-glass-10);
+  display: grid; place-items: center;
+  color: var(--c-text-primary);
+  font-size: 24px;
+}
+.hero__dots {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--rail-width) * 24 / 1440);
+  display: inline-flex; align-items: center;
+  background: var(--c-glass-10);
+  border-radius: 200px;
+  padding: 4px;
+}
+.hero__dot {
+  width: 10px; height: 10px;
+  border-radius: 5px;
+  background: var(--c-glass-20);
+  margin: 6px;
+  transition: width .25s, background .25s;
+  cursor: pointer;
+}
+.hero__dot--active {
+  background: var(--c-text-primary);
+  width: 32px;
+}
+
+/* ============================================================
+   RAIL (shared)
+   ============================================================ */
+.rail {
+  width: var(--rail-width);
+  margin: 0 auto;
+  padding-top:    calc(var(--rail-width) * 24 / 1440);
+  padding-bottom: calc(var(--rail-width) * 32 / 1440);
+}
+
+/* Per-variant vertical center of the IMAGE area
+   (= card-width × image-aspect-ratio ÷ 2)
+   so the hover arrows land on the image, not on the text under it. */
+.rail--16x9   { --arrow-y: calc(var(--rail-width) * 317   / 1440 * 9 / 32); }
+.rail--2x3-sm { --arrow-y: calc(var(--rail-width) * 252.8 / 1440 * 3 / 4); }
+.rail--2x3-lg { --arrow-y: calc(var(--rail-width) * 309   / 1440 * 3 / 4); }
+.rail--promo  { --arrow-y: calc(var(--rail-width) * 1304  / 1440 * 520 / 2608); }
+
+/* Title wrapper — no padding. Title sits flush at the rail's left edge. */
+.rail__padded {
+  padding: 0;
+}
+.rail__title {
+  display: block;
+  margin: 0 0 24px 0;
+  padding: 0;
+  font-weight: 700;
+  font-size: 34px;
+  line-height: calc(46 / 34);
+  color: var(--c-text-secondary);
+}
+
+/* Wrapper so the arrows + edge gradients can sit on the cards row */
+.rail__viewport {
+  position: relative;
+  /* This sits OUTSIDE rail__padded so the gradients can reach the rail edge */
+}
+
+/* Edge gradient — right side only, soft multi-stop fade into the bg color */
+.rail__viewport::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 180px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    to left,
+    var(--c-bg)             0%,
+    rgba(11, 12, 14, 0.95) 12%,
+    rgba(11, 12, 14, 0.72) 32%,
+    rgba(11, 12, 14, 0.42) 56%,
+    rgba(11, 12, 14, 0.18) 78%,
+    rgba(11, 12, 14, 0)   100%
+  );
+}
+
+.rail__scroller {
+  display: flex;
+  gap: 24px;                        /* 24px BETWEEN CARDS */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding: 0 0 8px 0;               /* no left/right padding — flush with title */
+  scrollbar-width: none;
+}
+.rail__scroller::-webkit-scrollbar { display: none; }
+.rail__scroller > * { flex: 0 0 auto; scroll-snap-align: start; }
+
+/* Hover-only scroll arrows, centered on the IMAGE area */
+.rail__arrow {
+  position: absolute;
+  top: var(--arrow-y, 50%);
+  transform: translateY(-50%);
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.72);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  display: grid; place-items: center;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity .2s ease, background .15s ease, transform .15s ease;
+  cursor: pointer;
+}
+.rail__arrow:hover {
+  background: rgba(0, 0, 0, 0.92);
+  transform: translateY(-50%) scale(1.06);
+}
+.rail__arrow svg { width: 26px; height: 26px; display: block; }
+.rail__arrow--left  { left:  8px; }
+.rail__arrow--right { right: 8px; }
+.rail:hover .rail__arrow { opacity: 1; }
+
+/* ============================================================
+   CARD — 16:9 (lg)  Figma 14:4509  width=317, gap below image=24
+   ============================================================ */
+.card-16x9 {
+  width: calc(var(--rail-width) * 317 / 1440);
+  display: flex; flex-direction: column;
+  gap: calc(var(--rail-width) * 24 / 1440);
+}
+.card-16x9__img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--c-image-placeholder);
+  border-radius: 12px;
+}
+.card-16x9__text {
+  display: flex; flex-direction: column;
+  gap: calc(var(--rail-width) * 8 / 1440);
+}
+.card-16x9__title {
+  font-weight: 500;
+  font-size: 32px;
+  line-height: calc(40 / 32);
+  color: var(--c-text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.card-16x9__sub {
+  font-weight: 400;
+  font-size: 27px;
+  line-height: calc(38 / 27);
+  color: var(--c-text-secondary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ============================================================
+   CARD — 2:3 portrait (sm-v at 252.8, lg at 309)  Figma 14:3686 / 14:3707
+   ============================================================ */
+.card-2x3 {
+  display: flex; flex-direction: column;
+  gap: calc(var(--rail-width) * 24 / 1440);
+}
+.card-2x3--sm { width: calc(var(--rail-width) * 252.8 / 1440); }
+.card-2x3--lg { width: calc(var(--rail-width) * 309   / 1440); }
+.card-2x3__img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: var(--c-image-placeholder);
+  border-radius: 12px;
+}
+.card-2x3__text {
+  display: flex; flex-direction: column;
+  gap: calc(var(--rail-width) * 8 / 1440);
+}
+.card-2x3__title {
+  font-weight: 500;
+  font-size: 32px;
+  line-height: calc(40 / 32);
+  color: var(--c-text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.card-2x3__sub {
+  font-weight: 400;
+  font-size: 27px;
+  line-height: calc(38 / 27);
+  color: var(--c-text-secondary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ============================================================
+   CARD — Promo (xxl 1304×520)  Figma 14:3697
+   ============================================================ */
+.card-promo {
+  width: calc(var(--rail-width) * 1304 / 1440);
+  display: flex; flex-direction: column;
+  gap: calc(var(--rail-width) * 24 / 1440);
+}
+.card-promo__img {
+  width: 100%;
+  aspect-ratio: 1304 / 520;
+  background: var(--c-image-placeholder);
+  border-radius: 12px;
+}
+.card-promo__text {
+  display: flex; flex-direction: column;
+  gap: calc(var(--rail-width) * 8 / 1440);
+}
+.card-promo__title {
+  font-weight: 500;
+  font-size: 32px;
+  line-height: calc(40 / 32);
+  color: var(--c-text-primary);
+}
+.card-promo__sub {
+  font-weight: 400;
+  font-size: 27px;
+  line-height: calc(38 / 27);
+  color: var(--c-text-secondary);
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.footer {
+  width: var(--rail-width);
+  margin: calc(var(--rail-width) * 24 / 1440) auto 0 auto;
+  padding: calc(var(--rail-width) * 40 / 1440) calc(var(--rail-width) * 56 / 1440);
+  border-top: 1px solid var(--c-glass-10);
+  color: var(--c-text-secondary);
+  font-size: 18px;
+  display: flex; justify-content: space-between; flex-wrap: wrap;
+  gap: calc(var(--rail-width) * 20 / 1440);
+}
+.footer__logo { color: var(--c-text-primary); font-weight: 700; letter-spacing: .08em; }
+.footer__logo span { color: var(--c-accent); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useRef } = React;
+
+// ------- Card content pools -------
+// Short strings so nothing truncates at common desktop viewports.
+const CARD_POOL = [
+  { title: "F1 Highlights",   sub: "Season 2 finale" },
+  { title: "Cliff Diving",    sub: "Best of 2024" },
+  { title: "Mountain Bike",   sub: "Live from Tokyo" },
+  { title: "Big Wave Surf",   sub: "Round 4 of 8" },
+  { title: "Skate Vert",      sub: "Behind the scenes" },
+  { title: "Snowboard Cup",   sub: "Athlete profile" },
+  { title: "Free Solo",       sub: "Director's cut" },
+  { title: "Dakar 2024",      sub: "Quarterfinals" },
+  { title: "Wings for Life",  sub: "Top 10 moments" },
+  { title: "BMX Worlds",      sub: "Episode preview" },
+  { title: "Air Race Tokyo",  sub: "Final lap" },
+  { title: "Climb Comp",      sub: "World tour" },
+  { title: "Glacier Run",     sub: "Recap show" },
+  { title: "Drone Sports",    sub: "Inside look" },
+  { title: "Pump Track",      sub: "Special edition" },
+];
+const PROMO_POOL = [
+  { title: "Red Bull TV Originals", sub: "New series streaming this week" },
+  { title: "Live this Saturday",    sub: "World tour finale, all access" },
+  { title: "Featured collection",   sub: "Hand-picked stories worth your time" },
+];
+// Deterministic pick — different `seed` per rail so each rail looks different,
+// but the same on every re-render.
+function pick(pool, n, seed) {
+  return Array.from({ length: n }, (_, i) => pool[(seed + i * 7) % pool.length]);
+}
+
+function Nav() {
+  const tabs = ["Home", "Films", "Series", "Live", "Sports", "More"];
+  const [active, setActive] = useState(0);
+  return (
+    <nav className="nav">
+      <div className="nav__left">
+        <div className="nav__logo">Logo</div>
+        <div className="nav__tabs">
+          {tabs.map((label, i) => (
+            <a key={label}
+               href="#"
+               className={"nav__tab" + (i === active ? " nav__tab--active" : "")}
+               onClick={(e) => { e.preventDefault(); setActive(i); }}>
+              {label}
+            </a>
+          ))}
+        </div>
+      </div>
+      <div className="nav__right">
+        <button className="nav__cta">Get the App</button>
+        <button className="nav__icon-btn" aria-label="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+        </button>
+        <button className="nav__icon-btn" aria-label="Profile">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0H4z" />
+          </svg>
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+const HERO_SLIDES = [
+  {
+    title: "Cliff Diving World Final 2024",
+    rating: "TV-G", badge: "LIVE", metadata: "Live now · Round 4",
+    desc: "The world's best high divers face off in Polignano a Mare for the season finale. Every leap, every twist, every splash — live from the Italian coast.",
+  },
+  {
+    title: "F1 Drive to Survive",
+    rating: "TV-14", badge: "NEW", metadata: "Season 6 · 10 episodes",
+    desc: "Behind the scenes of Formula 1's most dramatic season. Rivalries, breakdowns, and triumphs through ten new episodes streaming this week.",
+  },
+  {
+    title: "Wings for Life World Run",
+    rating: "TV-G", badge: "FILM", metadata: "2024 · 110 min",
+    desc: "Thousands run for those who can't. A global event spanning every continent — coverage from start to finish, all around the world in a single afternoon.",
+  },
+];
+
+function HeroCarousel() {
+  const [idx, setIdx] = useState(0);
+  const slide = HERO_SLIDES[idx];
+  return (
+    <div className="hero-wrap" role="region" aria-label="featured carousel">
+      <div className="hero__bg" />
+      <div className="hero__scrim" />
+      <div className="hero__content">
+        <div className="hero__info">
+          <h1 className="hero__title">{slide.title}</h1>
+          <div className="hero__meta-row">
+            <span className="pill pill--rating">{slide.rating}</span>
+            <span className="pill pill--new">{slide.badge}</span>
+            <span className="hero__metadata">{slide.metadata}</span>
+          </div>
+          <p className="hero__desc">{slide.desc}</p>
+          <div className="hero__buttons">
+            <button className="btn-play">▶ Label</button>
+            <button className="btn-icon-circle" aria-label="more info">i</button>
+          </div>
+        </div>
+      </div>
+      <div className="hero__dots">
+        {HERO_SLIDES.map((_, i) => (
+          <div key={i}
+            className={"hero__dot" + (i === idx ? " hero__dot--active" : "")}
+            onClick={() => setIdx(i)}
+            role="button" aria-label={`Go to slide ${i + 1}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Rail({ title, variant, children }) {
+  const scrollerRef = useRef(null);
+  const nudge = (dir) => {
+    const s = scrollerRef.current;
+    if (!s) return;
+    s.scrollBy({ left: dir * s.clientWidth * 0.75, behavior: 'smooth' });
+  };
+  return (
+    <section className={`rail rail--${variant}`}>
+      <div className="rail__padded">
+        <h2 className="rail__title">{title}</h2>
+      </div>
+      <div className="rail__viewport">
+        <button className="rail__arrow rail__arrow--left"
+                onClick={() => nudge(-1)} aria-label="Scroll left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <div className="rail__scroller" ref={scrollerRef}>{children}</div>
+        <button className="rail__arrow rail__arrow--right"
+                onClick={() => nudge(1)} aria-label="Scroll right">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function Card16x9({ title, sub }) {
+  return (
+    <div className="card-16x9">
+      <div className="card-16x9__img" />
+      <div className="card-16x9__text">
+        <div className="card-16x9__title">{title}</div>
+        <div className="card-16x9__sub">{sub}</div>
+      </div>
+    </div>
+  );
+}
+function Rail16x9({ title, seed = 0 }) {
+  const items = pick(CARD_POOL, 10, seed);
+  return <Rail title={title} variant="16x9">{items.map((it, i) => <Card16x9 key={i} {...it} />)}</Rail>;
+}
+
+function Card2x3({ size = "sm", title, sub }) {
+  return (
+    <div className={`card-2x3 card-2x3--${size}`}>
+      <div className="card-2x3__img" />
+      <div className="card-2x3__text">
+        <div className="card-2x3__title">{title}</div>
+        <div className="card-2x3__sub">{sub}</div>
+      </div>
+    </div>
+  );
+}
+function Rail2x3({ title, size = "sm", seed = 0 }) {
+  const items = pick(CARD_POOL, 10, seed);
+  return <Rail title={title} variant={`2x3-${size}`}>{items.map((it, i) => <Card2x3 key={i} size={size} {...it} />)}</Rail>;
+}
+
+function CardPromo({ title, sub }) {
+  return (
+    <div className="card-promo">
+      <div className="card-promo__img" />
+      <div className="card-promo__text">
+        <div className="card-promo__title">{title}</div>
+        <div className="card-promo__sub">{sub}</div>
+      </div>
+    </div>
+  );
+}
+function RailPromo({ title }) {
+  return <Rail title={title} variant="promo">{PROMO_POOL.map((it, i) => <CardPromo key={i} {...it} />)}</Rail>;
+}
+
+function Footer() {
+  return (
+    <footer className="footer">
+      <div className="footer__logo">RB<span>TV</span></div>
+      <div>© 2026 — React responsive prototype</div>
+    </footer>
+  );
+}
+
+function App() {
+  return (
+    <div className="app">
+      <Nav />
+      <HeroCarousel />
+      <Rail16x9  title="Trending Now"     seed={0} />
+      <Rail2x3   title="New This Week"    size="lg" seed={3} />
+      <RailPromo title="Live & Upcoming" />
+      <Rail2x3   title="Action Sports"    size="sm" seed={6} />
+      <Rail16x9  title="Documentaries"    seed={9} />
+      <Rail16x9  title="Just for You"     seed={12} />
+      <Footer />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
